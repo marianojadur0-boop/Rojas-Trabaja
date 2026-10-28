@@ -254,6 +254,15 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
       <div class="kicker">Para quienes buscan trabajo</div>
       <h2 class="sec-h">Armá tu CV en 5 minutos</h2>
       <p class="sub">Completá los datos y mirá cómo queda a la derecha. Después descargalo en PDF para mandarlo por WhatsApp o mail. Tus datos no se guardan en ningún lado: quedan solo en tu celular.</p>
+      <div class="panel-card" style="margin:18px 0;padding:18px;border:2px solid #d9e5ef;border-radius:14px;background:#fff">
+        <h3 style="margin:0 0 8px">¿Ya tenés tu currículum en PDF?</h3>
+        <p class="note" style="margin:0 0 12px">Elegí el archivo que tenés guardado en tu celular. Para enviarlo, se abrirá WhatsApp y tendrás que adjuntar el PDF manualmente en el chat.</p>
+        <label for="cvArchivoExistente" class="btn ghost" style="display:inline-block;cursor:pointer">Elegir mi CV en PDF</label>
+        <input id="cvArchivoExistente" type="file" accept="application/pdf,.pdf" style="display:block;margin-top:12px;max-width:100%">
+        <p id="cvArchivoEstado" class="note" role="status" style="margin-top:8px">Todavía no seleccionaste ningún archivo.</p>
+        <button class="btn" id="cvEnviarWhatsApp" type="button" disabled>Continuar por WhatsApp</button>
+        <p class="note" style="margin-top:10px"><strong>Importante:</strong> esta versión no guarda ni sube el archivo a la web. No adjuntes datos sensibles si no querés compartirlos por WhatsApp.</p>
+      </div>
       <div class="cv-wrap">
         <form class="cv-form" id="cvForm" onsubmit="return false">
           <fieldset><legend>Datos personales</legend>
@@ -489,6 +498,36 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
        ${sec("Habilidades", v("cvHab") ? `<p>${v("cvHab").split(",").map(s => esc(s.trim())).filter(Boolean).join(" · ")}</p>` : ph("Lo que sabés hacer."))}`;
   }
   $$("[data-cv]").forEach(i => i.addEventListener("input", drawCV));
+  const cvArchivoExistente = document.getElementById("cvArchivoExistente");
+  const cvArchivoEstado = document.getElementById("cvArchivoEstado");
+  const cvEnviarWhatsApp = document.getElementById("cvEnviarWhatsApp");
+  let cvArchivoNombre = "";
+  if (cvArchivoExistente) {
+    cvArchivoExistente.addEventListener("change", () => {
+      const file = cvArchivoExistente.files && cvArchivoExistente.files[0];
+      cvArchivoNombre = "";
+      if (!file) {
+        cvArchivoEstado.textContent = "Todavía no seleccionaste ningún archivo.";
+        cvEnviarWhatsApp.disabled = true;
+        return;
+      }
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        cvArchivoExistente.value = "";
+        cvArchivoEstado.textContent = "Elegí un archivo PDF, por favor.";
+        cvEnviarWhatsApp.disabled = true;
+        return;
+      }
+      cvArchivoNombre = file.name;
+      cvArchivoEstado.textContent = "Seleccionaste: " + file.name + ". Recordá que tenés que adjuntarlo manualmente en WhatsApp.";
+      cvEnviarWhatsApp.disabled = false;
+    });
+    cvEnviarWhatsApp.addEventListener("click", () => {
+      if (!cvArchivoNombre) return;
+      const mensaje = "Hola, quiero presentar mi currículum para Rojas Trabaja. Tengo un archivo PDF llamado " + cvArchivoNombre + ". ¿Cómo puedo enviarlo de forma segura?";
+      window.open("https://wa.me/5492474566981?text=" + encodeURIComponent(mensaje), "_blank", "noopener");
+    });
+  }
+
   $("#cvPrint").onclick = () => { if (!v("cvNombre")) { alert("Completá al menos tu nombre para descargar el CV."); $("#cvNombre").focus(); return; } window.print(); };
   $("#cvBorrar").onclick = () => { $("#cvForm").reset(); drawCV(); };
   $("#cvEjemplo").onclick = () => {
@@ -546,8 +585,8 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   $('#candidateSearch').addEventListener('input',renderCandidates); $('#candidateLoc').addEventListener('change',renderCandidates);
   $('#authForm').addEventListener('submit',async e=>{e.preventDefault();if(!supa){setStatus('#authStatus','Acceso aún no activado: falta configurar Supabase.');return;}const email=$('#authEmail').value.trim(),password=$('#authPassword').value;const {data,error}=await supa.auth.signInWithPassword({email,password});if(error){setStatus('#authStatus','Credenciales incorrectas o acceso no disponible.');return;}const {data:profile}=await supa.from('profiles').select('role,status').eq('id',data.user.id).single();if(!profile || !['company','admin'].includes(profile.role)||profile.status!=='approved'){await supa.auth.signOut();setStatus('#authStatus','Acceso no autorizado. Solicitá habilitación al administrador.');return;}setStatus('#authStatus','Acceso autorizado.');refreshPrivate();});
   $('#candidateAuthForm').addEventListener('submit',async e=>{e.preventDefault();if(!supa){setStatus('#candidateAuthStatus','Falta conectar la base privada.');return;}const {error}=await supa.auth.signInWithOtp({email:$('#candidateAuthEmail').value.trim(),options:{emailRedirectTo:location.origin+location.pathname+'#cv'}});setStatus('#candidateAuthStatus',error?'No se pudo enviar el enlace.':'Revisá tu correo para verificar tu identidad.');});
-  const companyWhatsApp=(window.ROJAS_SUPABASE||{}).adminWhatsApp||'';
-  const request=$('#requestCompanyAccess');if(companyWhatsApp){request.href='https://wa.me/'+encodeURIComponent(companyWhatsApp)+'?text='+encodeURIComponent('Hola, solicito acceso empresarial a los CV de Rojas Trabaja. Nombre y apellido: ___ Cargo: ___ Empresa: ___ Correo corporativo: ___');request.target='_blank';request.rel='noopener';}else{request.addEventListener('click',e=>{e.preventDefault();setStatus('#authStatus','El administrador debe configurar su WhatsApp de solicitudes en supabase-config.js.');});}
+  const companyWhatsApp=(window.ROJAS_SUPABASE||{}).adminWhatsApp||'5492474566981';
+  const request=$('#requestCompanyAccess');if(request){request.href='https://wa.me/'+companyWhatsApp.replace(/\D/g,'')+'?text='+encodeURIComponent('Hola, solicito acceso empresarial a los CV de Rojas Trabaja. Nombre y apellido: ___ Cargo: ___ Empresa: ___ Correo corporativo: ___');request.target='_blank';request.rel='noopener';}
 
   $('#signOut').addEventListener('click',async()=>{if(supa)await supa.auth.signOut();location.reload();});
   $('#cvGuardar').addEventListener('click',async()=>{
