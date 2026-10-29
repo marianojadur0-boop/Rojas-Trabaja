@@ -465,13 +465,49 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
   $("#moreBtn").onclick = () => { shown += PAGE; render(); };
   $("#list").addEventListener("click", e => { if (e.target.closest("[data-demo]")) alert("Esta es una oferta de ejemplo. En la versión real, este botón muestra el contacto de la empresa."); });
 
-  // Publicar oferta (demo)
-  $("#formOferta").onsubmit = e => {
+  
+  // Publicar oferta y guardarla en Supabase
+  $("#formOferta").onsubmit = async e => {
     e.preventDefault();
-    jobs.unshift({ titulo: $("#oPuesto").value, empresa: $("#oEmpresa").value, localidad: $("#oLoc").value, rubro: $("#oRub").value,
-      descripcion: $("#oDesc").value, primer_empleo: $("#oPe").checked, modalidad: "Presencial", fuente: "Publicada en Rojas Trabaja", t: Date.now(), url: "", ejemplo: true });
-    $("#okOferta").style.display = "block"; e.target.reset(); reset();
+
+    const oferta = {
+      titulo: $("#oPuesto").value.trim(),
+      empresa: $("#oEmpresa").value.trim(),
+      descripcion: $("#oDesc").value.trim()
+    };
+
+    if (!supa) {
+      alert("Falta configurar la conexión con Supabase. La oferta no se guardó.");
+      return;
+    }
+
+    const { data, error } = await supa
+      .from("ofertas")
+      .insert([oferta])
+      .select();
+
+    if (error) {
+      alert("No se pudo guardar la oferta: " + error.message);
+      return;
+    }
+
+    jobs.unshift({
+      ...oferta,
+      localidad: $("#oLoc").value,
+      rubro: $("#oRub").value,
+      primer_empleo: $("#oPe").checked,
+      modalidad: "Presencial",
+      fuente: "Publicada en Rojas Trabaja",
+      t: Date.now(),
+      url: "",
+      ejemplo: false
+    });
+
+    $("#okOferta").style.display = "block";
+    e.target.reset();
+    reset();
   };
+
 
   // CV
   const v = id => $("#" + id).value.trim();
