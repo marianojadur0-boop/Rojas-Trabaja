@@ -1,0 +1,28 @@
+# Corre solo todos los días a las 6:00 (hora de Argentina) y guarda las ofertas nuevas.
+name: Actualizar ofertas
+on:
+  schedule:
+    - cron: "0 6 * * *"
+      timezone: "America/Argentina/Buenos_Aires"
+  workflow_dispatch: {}   # botón para correrlo a mano si hace falta
+permissions:
+  contents: write
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Buscar ofertas
+        env:
+          FORM_CSV_URL: ${{ secrets.FORM_CSV_URL }}
+          JOOBLE_KEY: ${{ secrets.JOOBLE_KEY }}
+        run: python robot/actualizar.py
+      - name: Guardar cambios
+        run: |
+          git config user.name "robot-rojas-trabaja"
+          git config user.email "robot@users.noreply.github.com"
+          git add data/ofertas.json
+          git commit -m "Ofertas actualizadas $(date +%F)" || echo "Sin cambios"
+          git push
